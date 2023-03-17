@@ -5,17 +5,20 @@ import "./Pausable.sol";
 import "./EIP712.sol";
 
 contract ERC20 is Pausable, EIP712 {
+
     // ERC20 State Variables
-    string private _name;
-    string private _symbol;
+    bytes32 private immutable PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
     uint8 private _decimals;
     address private _owner;
-    bytes32 private immutable PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    
+    uint256 private _totalSupply;
+    string private _name;
+    string private _symbol;
 
     mapping(address => uint256) private _nonces;
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
-    uint256 private _totalSupply;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -28,7 +31,7 @@ contract ERC20 is Pausable, EIP712 {
         _name = name_;
         _symbol = symbol_;
         _decimals = 18;
-        _totalSupply = 100 * 10 ** 18;
+        _totalSupply = 100 * 10E18;
         _mint(msg.sender, _totalSupply);
     }
     // permit functions
@@ -41,6 +44,7 @@ contract ERC20 is Pausable, EIP712 {
         bytes32 r,
         bytes32 s
     ) public virtual {
+        require(owner != address(0), "ERC20: Invalid owner address");
         require(block.timestamp <= deadline, "ERC20: Expired permit");
 
         bytes32 digest = _toTypedDataHash(
@@ -65,9 +69,9 @@ contract ERC20 is Pausable, EIP712 {
         return _nonces[owner];
     }
     // nonces increment
-    function _nonceHandle(address owner) internal returns(uint256 curNonce){
-        curNonce = _nonces[owner];
-        _nonces[owner] = curNonce + 1;
+    function _nonceHandle(address _addr) internal returns(uint256 curNonce){
+        curNonce = _nonces[_addr];
+        _nonces[_addr]++;
 
     }
     
@@ -81,7 +85,7 @@ contract ERC20 is Pausable, EIP712 {
     }
 
 
-    // own check 
+    // owner check
     modifier onlyOwner() {
         _checkOwner(msg.sender);
         _;
